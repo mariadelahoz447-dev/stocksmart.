@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StockSmart | Gestión de inventarios</title>
+<style>
+:root{--blue:#2457d6;--navy:#172554;--bg:#f4f7fb;--text:#182230;--muted:#667085;--line:#e5eaf2;--green:#137a45;--amber:#a15c00;--red:#b42318}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,Arial,sans-serif}
+header{background:linear-gradient(120deg,#163b9b,#3478f6);color:white;padding:25px max(20px,calc((100% - 1180px)/2));}
+.brand{display:flex;align-items:center;gap:12px}.logo{background:#ffffff24;border:1px solid #ffffff45;border-radius:14px;padding:12px;font-size:24px}
+h1{font-size:26px;margin:0}header p{margin:5px 0 0;color:#e2eaff}
+main{max-width:1180px;margin:24px auto;padding:0 18px 40px}.intro{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:18px}.intro h2{margin:0 0 5px}.intro p{margin:0;color:var(--muted)}
+button{border:0;border-radius:9px;padding:10px 14px;font-weight:700;cursor:pointer;background:var(--blue);color:white}button.secondary{background:#e9efff;color:#2147a7}button.danger{background:#fff0ef;color:var(--red)}button:focus,input:focus,select:focus{outline:3px solid #b8ccff;outline-offset:1px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}.stat,.panel{background:white;border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:0 2px 7px #17255408}.stat span{color:var(--muted);font-size:13px}.stat strong{display:block;font-size:28px;margin-top:8px}.stat small{color:var(--muted)}
+.columns{display:grid;grid-template-columns:1.1fr 1.9fr;gap:16px}.panel h3{margin:0 0 14px}.field{margin-bottom:12px}.field label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}.field input,.field select,.search{width:100%;padding:11px;border:1px solid #d5dce8;border-radius:8px;font:inherit;background:white}.form-actions{display:flex;gap:8px;flex-wrap:wrap}
+.table-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.search{max-width:230px}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:620px}th,td{text-align:left;padding:12px 10px;border-bottom:1px solid var(--line);font-size:13px}th{color:var(--muted);font-weight:700;background:#fbfcfe}td strong{font-size:14px}.status{display:inline-block;padding:5px 8px;border-radius:30px;font-size:11px;font-weight:700}.ok{background:#e6f6ed;color:var(--green)}.low{background:#fff2d9;color:var(--amber)}.out{background:#ffebe9;color:var(--red)}.actions{display:flex;gap:6px}.actions button{padding:7px 9px;font-size:12px}.empty{text-align:center;padding:25px;color:var(--muted)}.note{margin-top:16px;padding:13px 15px;background:#eef4ff;border-radius:10px;color:#294780;font-size:13px;line-height:1.5}.footer{text-align:center;color:var(--muted);font-size:12px;margin-top:22px}
+@media(max-width:850px){.stats{grid-template-columns:repeat(2,1fr)}.columns{grid-template-columns:1fr}.intro{align-items:flex-start;flex-direction:column}}@media(max-width:440px){.stats{gap:8px}.stat{padding:13px}.stat strong{font-size:23px}h1{font-size:22px}}
+</style>
+</head>
+<body>
+<header><div class="brand"><div class="logo">📦</div><div><h1>StockSmart</h1><p>Gestión inteligente de inventarios</p></div></div></header>
+<main>
+  <section class="intro"><div><h2>Panel de control</h2><p>Organiza tus productos y toma mejores decisiones.</p></div><button id="exportBtn" class="secondary">⬇ Exportar CSV</button></section>
+  <section class="stats">
+    <div class="stat"><span>Productos registrados</span><strong id="totalProducts">0</strong><small>Referencias diferentes</small></div>
+    <div class="stat"><span>Unidades disponibles</span><strong id="totalUnits">0</strong><small>Stock total actual</small></div>
+    <div class="stat"><span>Por reponer</span><strong id="lowProducts">0</strong><small>En el mínimo o por debajo</small></div>
+    <div class="stat"><span>Valor del inventario</span><strong id="inventoryValue">$0</strong><small>Estimado según costo unitario</small></div>
+  </section>
+  <section class="columns">
+    <div class="panel">
+      <h3 id="formTitle">➕ Agregar producto</h3>
+      <form id="productForm">
+        <div class="field"><label for="code">Código</label><input id="code" required maxlength="20" placeholder="Ej. P005"></div>
+        <div class="field"><label for="name">Nombre del producto</label><input id="name" required maxlength="80" placeholder="Ej. Arroz 1 kg"></div>
+        <div class="field"><label for="category">Categoría</label><select id="category"><option>Alimentos</option><option>Bebidas</option><option>Aseo</option><option>Papelería</option><option>Otros</option></select></div>
+        <div class="field"><label for="quantity">Cantidad disponible</label><input id="quantity" type="number" min="0" step="1" required value="10"></div>
+        <div class="field"><label for="minimum">Stock mínimo (alerta)</label><input id="minimum" type="number" min="0" step="1" required value="5"></div>
+        <div class="field"><label for="cost">Costo por unidad (COP)</label><input id="cost" type="number" min="0" step="100" required value="2000"></div>
+        <div class="form-actions"><button type="submit" id="saveBtn">Guardar producto</button><button type="button" class="secondary" id="cancelEdit" hidden>Cancelar</button><button type="button" class="secondary" id="resetDemo">Restaurar ejemplo</button></div>
+      </form>
+      <div class="note"><strong>¿Cómo funciona?</strong><br>Agrega un producto y registra entradas o salidas. StockSmart calcula las unidades disponibles y te avisa si el producto necesita reposición.</div>
+    </div>
+    <div class="panel">
+      <div class="table-head"><h3>📋 Inventario</h3><input class="search" id="search" placeholder="Buscar producto..."></div>
+      <div class="table-wrap"><table><thead><tr><th>Producto</th><th>Stock</th><th>Mínimo</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="productRows"></tbody></table><div id="empty" class="empty" hidden>No hay productos. Agrega uno con el formulario.</div></div>
+    </div>
+  </section>
+  <p class="footer">StockSmart · Prototipo académico de Ingeniería Industrial · Los datos se guardan en este navegador.</p>
+</main>
+<script>
+const KEY='stocksmart-demo-v1';
+const demo=[
+ {code:'P001',name:'Gaseosa',category:'Bebidas',quantity:20,minimum:5,cost:2500},
+ {code:'P002',name:'Galletas',category:'Alimentos',quantity:15,minimum:5,cost:1800},
+ {code:'P003',name:'Leche',category:'Alimentos',quantity:4,minimum:10,cost:4200},
+ {code:'P004',name:'Agua',category:'Bebidas',quantity:30,minimum:8,cost:1500}
+];
+let products=loadProducts(), editingCode=null;
+function loadProducts(){try{const d=JSON.parse(localStorage.getItem(KEY));return Array.isArray(d)?d:structuredClone(demo)}catch{return structuredClone(demo)}}
+function save(){localStorage.setItem(KEY,JSON.stringify(products));render()}
+function money(n){return new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0}).format(n)}
+function status(p){if(p.quantity===0)return ['Agotado','out'];if(p.quantity<=p.minimum)return ['Por reponer','low'];return ['Disponible','ok']}
+function render(){
+ document.getElementById('totalProducts').textContent=products.length;
+ document.getElementById('totalUnits').textContent=products.reduce((s,p)=>s+p.quantity,0);
+ document.getElementById('lowProducts').textContent=products.filter(p=>p.quantity<=p.minimum).length;
+ document.getElementById('inventoryValue').textContent=money(products.reduce((s,p)=>s+p.quantity*p.cost,0));
+ const q=document.getElementById('search').value.trim().toLowerCase();
+ const filtered=products.filter(p=>(p.name+' '+p.code+' '+p.category).toLowerCase().includes(q));
+ const tbody=document.getElementById('productRows');tbody.innerHTML='';
+ filtered.forEach(p=>{const [label,cls]=status(p);const tr=document.createElement('tr');
+ tr.innerHTML=`<td><strong>${escapeHtml(p.name)}</strong><br><span style="color:#667085">${escapeHtml(p.code)} · ${escapeHtml(p.category)}</span><br><span style="color:#667085">${money(p.cost)} / unidad</span></td><td><strong>${p.quantity}</strong></td><td>${p.minimum}</td><td><span class="status ${cls}">${label}</span></td><td><div class="actions"><button class="secondary" data-action="in" data-code="${escapeHtml(p.code)}" title="Registrar entrada">+ Entrada</button><button class="secondary" data-action="out" data-code="${escapeHtml(p.code)}" title="Registrar salida">− Salida</button><button class="secondary" data-action="edit" data-code="${escapeHtml(p.code)}">Editar</button><button class="danger" data-action="delete" data-code="${escapeHtml(p.code)}">Borrar</button></div></td>`;
+ tbody.appendChild(tr)});
+ document.getElementById('empty').hidden=filtered.length!==0;
+}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+const form=document.getElementById('productForm');
+form.addEventListener('submit',e=>{e.preventDefault();const p={code:document.getElementById('code').value.trim(),name:document.getElementById('name').value.trim(),category:document.getElementById('category').value,quantity:Number(document.getElementById('quantity').value),minimum:Number(document.getElementById('minimum').value),cost:Number(document.getElementById('cost').value)};
+ if(!p.code||!p.name)return;
+ const duplicate=products.some(x=>x.code.toLowerCase()===p.code.toLowerCase()&&x.code!==editingCode);
+ if(duplicate){alert('Ese código ya existe. Usa uno diferente.');return}
+ if(editingCode){products=products.map(x=>x.code===editingCode?p:x);editingCode=null}else products.push(p);
+ form.reset();document.getElementById('quantity').value=10;document.getElementById('minimum').value=5;document.getElementById('cost').value=2000;document.getElementById('formTitle').textContent='➕ Agregar producto';document.getElementById('saveBtn').textContent='Guardar producto';document.getElementById('cancelEdit').hidden=true;save();
+});
+document.getElementById('productRows').addEventListener('click',e=>{const b=e.target.closest('button[data-action]');if(!b)return;const p=products.find(x=>x.code===b.dataset.code);if(!p)return;
+ switch(b.dataset.action){
+ case 'in':{const n=Number(prompt(`¿Cuántas unidades de ${p.name} ingresaron?`));if(Number.isInteger(n)&&n>0){p.quantity+=n;save()}else if(n!==0&&!Number.isNaN(n))alert('Ingresa un número entero mayor que cero.');break}
+ case 'out':{const n=Number(prompt(`¿Cuántas unidades de ${p.name} se vendieron?`));if(Number.isInteger(n)&&n>0){if(n>p.quantity){alert('No puedes registrar más unidades de las disponibles.');return}p.quantity-=n;save()}else if(n!==0&&!Number.isNaN(n))alert('Ingresa un número entero mayor que cero.');break}
+ case 'edit':editingCode=p.code;for(const id of ['code','name','category','quantity','minimum','cost'])document.getElementById(id).value=p[id];document.getElementById('formTitle').textContent='✏️ Editar producto';document.getElementById('saveBtn').textContent='Guardar cambios';document.getElementById('cancelEdit').hidden=false;document.getElementById('code').disabled=true;window.scrollTo({top:0,behavior:'smooth'});break;
+ case 'delete':if(confirm(`¿Seguro que quieres borrar ${p.name}?`)){products=products.filter(x=>x.code!==p.code);save()}break;
+ }
+});
+function resetForm(){editingCode=null;form.reset();document.getElementById('code').disabled=false;document.getElementById('quantity').value=10;document.getElementById('minimum').value=5;document.getElementById('cost').value=2000;document.getElementById('formTitle').textContent='➕ Agregar producto';document.getElementById('saveBtn').textContent='Guardar producto';document.getElementById('cancelEdit').hidden=true}
+document.getElementById('cancelEdit').addEventListener('click',resetForm);
+document.getElementById('search').addEventListener('input',render);
+document.getElementById('resetDemo').addEventListener('click',()=>{if(confirm('Esto reemplazará tus datos por los productos de ejemplo. ¿Continuar?')){products=structuredClone(demo);resetForm();save()}});
+document.getElementById('exportBtn').addEventListener('click',()=>{const rows=[['Código','Producto','Categoría','Cantidad','Mínimo','Costo unitario','Valor total','Estado'],...products.map(p=>[p.code,p.name,p.category,p.quantity,p.minimum,p.cost,p.quantity*p.cost,status(p)[0]])];const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\r\n');const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='stocksmart-inventario.csv';a.click();URL.revokeObjectURL(a.href)});
+render();
+</script>
+</body>
+</html>
